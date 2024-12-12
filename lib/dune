@@ -1,0 +1,19 @@
+(include_subdirs unqualified)
+(library
+ (name minicc)
+ (modules
+  ast
+  lexer
+  parser
+  token_type
+  token_stream
+  assembly
+  codegen
+  emit
+  compile
+  settings
+  utils)
+  (libraries camlp-streams)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
+ )
