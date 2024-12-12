@@ -54,6 +54,8 @@ let stage =
     Settings.Lex, Arg.info [ "lex" ] ~doc:"Run the lexer"
   and parse =
     Settings.Parse, Arg.info [ "parse" ] ~doc:"Rune the lexer and parser" 
+  and tacky = 
+    Settings.Tacky, Arg.info ["tacky"] ~doc:"Run the lexer and parser and tacky generator"
   and codegen =
     let doc = "Run through code generation but stop before emitting assembly" in
     Settings.Codegen, Arg.info [ "codegen" ] ~doc
@@ -61,7 +63,7 @@ let stage =
     let doc = "Stop before assembling (keep .s file)" in
     Settings.Assembly, Arg.info [ "s"; "S" ] ~doc
   in
-  Arg.(value & vflag Settings.Executable [ lex; parse; codegen; assembly ])
+  Arg.(value & vflag Settings.Executable [ lex; parse;tacky; codegen; assembly ])
 ;;
 
 

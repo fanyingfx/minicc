@@ -1,2 +1,6 @@
 _build/
 .vscode/settings.json
+*.s
+*.tacky
+examples/*
+!examples/*.c

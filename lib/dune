@@ -11,6 +11,12 @@
   codegen
   emit
   compile
+  tacky
+  tacky_gen
+  tacky_print
+  replace_pseudos
+  instruction_fixup
+  unique_ids
   settings
   utils)
   (libraries camlp-streams)

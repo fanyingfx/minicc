@@ -47,7 +47,7 @@ let make_int lexer =
     | _ -> false
   in
   let value = eat_while lexer is_digit in
-   T.Constant (int_of_string value)
+  T.Constant (int_of_string value)
 ;;
 
 let keywords = T.[ "int", KWInt; "void", KWVoid; "return", KWReturn ]
@@ -86,6 +86,13 @@ let next_token lexer =
        | '{' -> LBrace
        | '}' -> RBrace
        | ';' -> Semicolon
+       | '~' -> Tilde
+       | '-' ->
+         if peek_char lexer = Some '-'
+         then (
+           advance_char lexer;
+           DoubleHyphen)
+         else Hyphen
        | _ -> raise (LexError ch))
     | None -> EOF
   in

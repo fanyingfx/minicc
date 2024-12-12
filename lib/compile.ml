@@ -1,18 +1,35 @@
-let lex src = src |> Lexer.lex
-let parse src = src |> lex |> Parser.parse
-let gen src = src |> parse |> Codegen.gen
+let lex content = content |> Lexer.lex
+let parse content = content |> lex |> Parser.parse
+
+let tacky_gen content src_file =
+  let tacky = Tacky_gen.gen (parse content) in
+  Tacky_print.debug_print_tacky src_file tacky;
+  tacky
+;;
+
+let gen content src_file =
+  let asm_ast = tacky_gen content src_file |> Codegen.gen in
+  if !Settings.debug
+  then (
+    let prealloc_filename = Filename.chop_extension src_file ^ ".prealloc.debug.s" in
+    Emit.emit prealloc_filename asm_ast);
+  let asm_ast1, stack_size = Replace_pseudos.replace_pseudos asm_ast in
+  let asm_ast2 = Instruction_fixup.fixup_program stack_size asm_ast1 in
+  asm_ast2
+;;
 
 let emit src src_file =
-  let asm_ast = gen src in
+  let asm_ast = gen src src_file in
   let asm_filename = Filename.chop_extension src_file ^ ".s" in
-  ignore (Emit.emit asm_filename asm_ast)
+  Emit.emit asm_filename asm_ast
 ;;
 
 let compile stage src_file =
-  let source = In_channel.with_open_text src_file In_channel.input_all in
+  let content = In_channel.with_open_text src_file In_channel.input_all in
   match stage with
-  | Settings.Lex -> ignore (lex source)
-  | Settings.Parse -> ignore (parse source)
-  | Settings.Codegen -> ignore (gen source)
-  | _ -> emit source src_file
+  | Settings.Lex -> ignore (lex content)
+  | Settings.Parse -> ignore (parse content)
+  | Settings.Tacky -> ignore (tacky_gen content src_file)
+  | Settings.Codegen -> ignore (gen content src_file)
+  | Settings.Assembly | Settings.Executable -> emit content src_file
 ;;

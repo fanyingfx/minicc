@@ -8,6 +8,9 @@ type t =
 | RParen
 | LBrace
 | RBrace
+| Hyphen
+| DoubleHyphen
+| Tilde
 | Semicolon
 | EOF
 [@@deriving show, eq]

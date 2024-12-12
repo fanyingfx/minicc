@@ -32,13 +32,34 @@ module Private = struct
     | other -> raise_error ~expected:(Name "an identifier") ~actual:other
   ;;
 
+  let parse_unop tokens =
+    match Token_stream.take_token tokens with
+    | T.Tilde -> Ast.Complement
+    | T.Hyphen -> Ast.Negate
+    | other -> raise_error ~expected:(Name "an unary operator") ~actual:other
+  ;;
+
   let parse_int tokens =
     match Token_stream.take_token tokens with
     | T.Constant x -> Ast.Constant x
     | other -> raise_error ~expected:(Name "an constant") ~actual:other
   ;;
 
-  let parse_exp tokens = parse_int tokens
+  let rec parse_exp tokens =
+    let next_token = Token_stream.peek tokens in
+    match next_token with
+    | T.Constant _ -> parse_int tokens
+    | T.Tilde | T.Hyphen ->
+      let op = parse_unop tokens
+      and inner_exp = parse_exp tokens in
+      Ast.Unary (op, inner_exp)
+    | T.LParen ->
+      ignore (Token_stream.take_token tokens);
+      let inner_exp = parse_exp tokens in
+      expect T.RParen tokens;
+      inner_exp
+    | t -> raise_error ~expected:(Name "an expression") ~actual:t
+  ;;
 
   let parse_statement tokens =
     expect T.KWReturn tokens;
@@ -59,12 +80,12 @@ module Private = struct
   ;;
 
   let parse_program tokens = Ast.Program (parse_function_definition tokens)
-;;
 end
-let parse token_list = 
-  try let tokens = Token_stream.of_list token_list in
-  Private.parse_program tokens
-with
-| Token_stream.End_of_stream -> raise (ParseError "Unexpected end of file")
 
-  
+let parse token_list =
+  try
+    let tokens = Token_stream.of_list token_list in
+    Private.parse_program tokens
+  with
+  | Token_stream.End_of_stream -> raise (ParseError "Unexpected end of file")
+;;
