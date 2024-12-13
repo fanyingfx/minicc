@@ -3,6 +3,8 @@ open Assembly
 let show_operand = function
   | Reg AX -> "%eax"
   | Reg R10 -> "%r10d"
+  | Reg DX -> "%edx"
+  | Reg R11 -> "%r11d"
   | Imm i -> Printf.sprintf "$%d" i
   | Stack i -> Printf.sprintf "%d(%%rbp)" i
   | Pseudo name -> Printf.sprintf "%%%s" name [@coverage off]
@@ -13,17 +15,35 @@ let show_unary_instruction = function
   | Not -> "notl"
 ;;
 
+let show_binary_instruciton = function
+  | Add -> "addl"
+  | Sub -> "subl"
+  | Mult -> "imull"
+;;
+
 let emit_instruction chan = function
   | Mov (src, dst) ->
     Printf.fprintf chan "\tmovl %s, %s\n" (show_operand src) (show_operand dst)
-  | Unary (operator,dst)->
+  | Unary (operator, dst) ->
     Printf.fprintf chan "\t%s %s\n" (show_unary_instruction operator) (show_operand dst)
-  | AllocateStack i -> Printf.fprintf chan "\tsubq $%d, %%rsp\n" i
-  | Ret -> Printf.fprintf chan {|
-    movq %%rbp, %%rsp
-    popq %%rbp
-    ret
-  |}
+  | Binary { op = operator; src; dst } ->
+    Printf.fprintf
+      chan
+      "\t%s %s, %s\n"
+      (show_binary_instruciton operator)
+      (show_operand src)
+      (show_operand dst)
+  | Idiv operand -> Printf.fprintf chan "\t%s %s\n" "idivl" (show_operand operand)
+  | Cdq -> Printf.fprintf chan "cdq"
+  | AllocateStack i -> Printf.fprintf chan "subq $%d, %%rsp\n" i
+  | Ret ->
+    Printf.fprintf
+      chan
+      {|
+  movq %%rbp, %%rsp
+  popq %%rbp
+  ret
+|}
 ;;
 
 let emit_function chan (Function { name; instructions }) =

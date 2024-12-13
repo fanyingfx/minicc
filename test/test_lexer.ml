@@ -23,3 +23,5 @@ let%test "a full program" =
 let%test "two hyphens" = Lexer.lex "- -" = [ Hyphen; Hyphen ]
 let%test "double hyphen" = Lexer.lex "a--" = [ Identifier "a"; DoubleHyphen ]
 let%test "two tildes" = Lexer.lex "~~" = [ Tilde; Tilde ]
+
+let%test "arithmetic" = Lexer.lex "+-*/" = [Plus;Hyphen;Star;Slash]

@@ -5,6 +5,14 @@ type unary_operator =
   | Negate
 [@@deriving show]
 
+type binary_operator =
+  | Add
+  | Subtract
+  | Multiply
+  | Divide
+  | Mod
+[@@deriving show]
+
 type tacky_val =
   | Constant of int
   | Var of string
@@ -16,6 +24,12 @@ type instruction =
       { op : unary_operator
       ; src : tacky_val
       ; dst : tacky_val
+      }
+  | Binary of
+      { op : binary_operator
+      ; src1 : tacky_val
+      ; src2 : tacky_val
+      ; dst: tacky_val
       }
 [@@deriving show]
 

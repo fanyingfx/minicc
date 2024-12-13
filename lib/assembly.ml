@@ -7,17 +7,25 @@ type operand =
 
 and reg =
   | AX
+  | DX
   | R10
+  | R11
 [@@deriving show]
 
 type unary_operator =
   | Neg
   | Not
 [@@deriving show]
+type binary_operator = 
+| Add| Sub | Mult
+[@@deriving show]
 
 type instruction =
   | Mov of operand * operand
   | Unary of unary_operator * operand
+  | Binary of {op:binary_operator ;src:operand ;dst:operand}
+  | Idiv of operand
+  | Cdq
   | AllocateStack of int
   | Ret
 [@@deriving show]

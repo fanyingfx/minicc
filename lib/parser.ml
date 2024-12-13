@@ -39,31 +39,61 @@ module Private = struct
     | other -> raise_error ~expected:(Name "an unary operator") ~actual:other
   ;;
 
+  let parse_binop tokens =
+    match Token_stream.take_token tokens with
+    | T.Plus -> Ast.Add
+    | T.Hyphen -> Ast.Subtract
+    | T.Star -> Ast.Multiply
+    | T.Slash -> Ast.Divide
+    | T.Percent -> Ast.Mod
+    | other -> raise_error ~expected:(Name "a binary operator") ~actual:other
+  ;;
+
   let parse_int tokens =
     match Token_stream.take_token tokens with
     | T.Constant x -> Ast.Constant x
     | other -> raise_error ~expected:(Name "an constant") ~actual:other
   ;;
 
-  let rec parse_exp tokens =
+  let get_precedence = function
+    | T.Star | T.Slash | T.Percent -> Some 50
+    | T.Plus | T.Hyphen -> Some 45
+    | _ -> None
+  ;;
+
+  let rec parse_factor tokens =
     let next_token = Token_stream.peek tokens in
     match next_token with
     | T.Constant _ -> parse_int tokens
     | T.Tilde | T.Hyphen ->
       let op = parse_unop tokens
-      and inner_exp = parse_exp tokens in
+      and inner_exp = parse_exp 0 tokens in
       Ast.Unary (op, inner_exp)
     | T.LParen ->
       ignore (Token_stream.take_token tokens);
-      let inner_exp = parse_exp tokens in
+      let inner_exp = parse_exp 0 tokens in
       expect T.RParen tokens;
       inner_exp
     | t -> raise_error ~expected:(Name "an expression") ~actual:t
-  ;;
+
+  and parse_exp min_prec tokens =
+     let initial_factor = parse_factor tokens in
+     let next_token = Token_stream.peek tokens in
+     let rec parse_exp_loop left next =
+     match get_precedence next with
+     | Some prec when prec >= min_prec ->
+     let operator = parse_binop tokens in
+     let right = parse_exp (prec + 1) tokens in
+     let left = Ast.Binary (operator, left, right) in
+     parse_exp_loop left (Token_stream.peek tokens)
+     | _ -> left
+     in
+     parse_exp_loop initial_factor next_token
+     ;;
 
   let parse_statement tokens =
     expect T.KWReturn tokens;
-    let exp = parse_exp tokens in
+    let exp = parse_exp 0 tokens in
     expect T.Semicolon tokens;
     Ast.Return exp
   ;;

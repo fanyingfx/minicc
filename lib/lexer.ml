@@ -87,6 +87,10 @@ let next_token lexer =
        | '}' -> RBrace
        | ';' -> Semicolon
        | '~' -> Tilde
+       | '+' -> Plus
+       | '*' -> Star
+       | '/' -> Slash
+       | '%' -> Percent
        | '-' ->
          if peek_char lexer = Some '-'
          then (

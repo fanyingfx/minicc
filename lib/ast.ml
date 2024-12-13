@@ -1,11 +1,21 @@
 type exp =
   | Constant of int
   | Unary of unary_operator * exp
+  | Binary of binary_operator * exp * exp
 [@@deriving show]
 
 and unary_operator =
   | Complement
   | Negate
+[@@deriving show]
+
+and binary_operator =
+  | Add
+  | Subtract
+  | Multiply
+  | Divide
+  | Mod
+[@@deriving show]
 
 type statement = Return of exp [@@deriving show]
 
@@ -17,30 +27,3 @@ type function_definition =
 [@@deriving show]
 
 type t = Program of function_definition [@@deriving show]
-
-let print_unary_operator = function
-| Complement -> "~"
-| Negate -> "-"
-
-let rec pretty_print_exp = function
-  | Constant i -> "Constant(" ^ string_of_int i ^ ")"
-  | Unary (op, exp) -> "Unary(" ^ print_unary_operator op ^"," ^ pretty_print_exp exp ^ ")"
-;;
-
-let pretty_print_statement = function
-  | Return exp -> "Return(\n \t\t\t" ^ pretty_print_exp exp ^ ")"
-;;
-
-let pretty_print_function_definition = function
-  | Function { name; body } ->
-    "Function {\n\t\tname = \""
-    ^ name
-    ^ "\",\n\t\tbody="
-    ^ pretty_print_statement body
-    ^ " }"
-;;
-
-let pretty_print_program = function
-  | Program func ->
-    print_string ("Program(\n\t" ^ pretty_print_function_definition func ^ ")")
-;;

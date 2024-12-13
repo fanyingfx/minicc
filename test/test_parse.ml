@@ -1,25 +1,28 @@
 (** Parser tests *)
 
 open Minicc
+module Test = struct
+  let parse_exp = Parser.Private.parse_exp 0;
+end
 
 let%test "expression" =
-  Parser.Private.parse_exp (Token_stream.of_list [ Token_type.Constant 100 ])
+  Test.parse_exp (Token_stream.of_list [ Token_type.Constant 100;Token_type.Semicolon ])
   = Ast.Constant 100
 ;;
 
 let%test "group" =
-  Parser.Private.parse_exp
-    (Token_stream.of_list Token_type.[ LParen; Constant 100; RParen ])
+  Test.parse_exp
+    (Token_stream.of_list Token_type.[ LParen; Constant 100; RParen;Token_type.Semicolon ])
   = Ast.Constant 100
 ;;
 
 let%test "negate" =
-  Parser.Private.parse_exp (Token_stream.of_list Token_type.[ Hyphen; Constant 100 ])
+  Test.parse_exp (Token_stream.of_list Token_type.[ Hyphen; Constant 100 ;Token_type.Semicolon])
   = Ast.Unary (Ast.Negate, Ast.Constant 100)
 ;;
 
 let%test "complement" =
-  Parser.Private.parse_exp (Token_stream.of_list Token_type.[ Tilde; Constant 100 ])
+  Test.parse_exp (Token_stream.of_list Token_type.[ Tilde; Constant 100 ;Token_type.Semicolon])
   = Ast.Unary (Ast.Complement, Ast.Constant 100)
 ;;
 let%test "statement" =
