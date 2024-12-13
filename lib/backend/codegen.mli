@@ -1,1 +1,1 @@
-val gen: Tacky.t -> Assembly.t
+val gen : Tacky.t -> Assembly.t

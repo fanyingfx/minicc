@@ -1,4 +1,5 @@
 (include_subdirs unqualified)
+
 (library
  (name minicc)
  (modules
@@ -19,7 +20,9 @@
   unique_ids
   settings
   utils)
-  (libraries camlp-streams)
+ (libraries camlp-streams)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
- )
+   (instrumentation
+  (backend bisect_ppx))
+  )

@@ -4,10 +4,7 @@ type exp =
   | Binary of binary_operator * exp * exp
 [@@deriving show]
 
-and unary_operator =
-  | Complement
-  | Negate
-[@@deriving show]
+and unary_operator = Complement | Negate | Not [@@deriving show]
 
 and binary_operator =
   | Add
@@ -15,15 +12,19 @@ and binary_operator =
   | Multiply
   | Divide
   | Mod
+  | And
+  | Or
+  | Equal
+  | NotEqual
+  | LessThan
+  | LessOrEqual
+  | GreaterThan
+  | GreaterOrEqual
 [@@deriving show]
 
 type statement = Return of exp [@@deriving show]
 
-type function_definition =
-  | Function of
-      { name : string
-      ; body : statement
-      }
+type function_definition = Function of { name : string; body : statement }
 [@@deriving show]
 
 type t = Program of function_definition [@@deriving show]
