@@ -163,9 +163,10 @@ let rec emit_tacky_for_statement = function
       @ [ T.Jump end_label; T.Label else_label ]
       @ eval_else
       @:: T.Label end_label
+  | Ast.Compound (Block block) -> emit_tacky_for_block block
   | Ast.Null -> []
 
-let emit_tacky_for_block_item = function
+and emit_tacky_for_block_item = function
   | Ast.S s -> emit_tacky_for_statement s
   | Ast.D (Declaration { name; init = Some e }) ->
       let eval_assignemnt, _assignment =
@@ -174,9 +175,11 @@ let emit_tacky_for_block_item = function
       eval_assignemnt
   | Ast.D (Declaration { init = None; _ }) -> []
 
+and emit_tacky_for_block block = List.concat_map emit_tacky_for_block_item block
+
 let emit_tacky_for_function = function
-  | Ast.Function { name; body } ->
-      let body_instructions = List.concat_map emit_tacky_for_block_item body in
+  | Ast.Function { name; body = Block block } ->
+      let body_instructions = List.concat_map emit_tacky_for_block_item block in
       let extra_return = T.(Return (Constant 0)) in
       T.Function { name; body = body_instructions @:: extra_return }
 

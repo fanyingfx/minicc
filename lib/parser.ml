@@ -158,10 +158,26 @@ module Private = struct
           else None
         in
         Ast.If { condition; then_clause; else_clause }
+    | T.LBrace ->
+        let _ = Token_stream.take_token tokens in
+        Ast.Compound (parse_block tokens)
     | _ ->
         let exp = parse_exp 0 tokens in
         expect T.Semicolon tokens;
         Ast.Expression exp
+
+  and parse_block tokens =
+    let rec parse_block_loop () =
+      match Token_stream.peek tokens with
+      | T.RBrace -> 
+        []
+      | _ -> 
+        let block_item = parse_block_item tokens in 
+        block_item:: parse_block_loop ()
+    in
+    let block_list = parse_block_loop () in
+    expect T.RBrace tokens;
+    Ast.Block block_list
 
   let parse_function_definition tokens =
     expect T.KWInt tokens;
@@ -170,15 +186,7 @@ module Private = struct
     expect T.KWVoid tokens;
     expect T.RParen tokens;
     expect T.LBrace tokens;
-    let rec parse_block_item_loop () =
-      match Token_stream.peek tokens with
-      | T.RBrace -> []
-      | _ ->
-          let stmt = parse_block_item tokens in
-          stmt :: parse_block_item_loop ()
-    in
-    let body = parse_block_item_loop () in
-    expect Token_type.RBrace tokens;
+    let body = parse_block tokens in
 
     Ast.Function { name; body }
 
