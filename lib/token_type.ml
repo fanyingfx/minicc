@@ -5,6 +5,8 @@ type t =
   | KWInt
   | KWVoid
   | KWReturn
+  | KWIf
+  | KWElse
   (* punctuation *)
   | LParen
   | RParen
@@ -28,6 +30,8 @@ type t =
   | GreaterThan
   | LessOrEqual
   | GreaterOrEqual
+  | QuestionMark
+  | Colon
   | EOF
   | Invalid
 [@@deriving show, eq]

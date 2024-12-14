@@ -64,6 +64,7 @@ module Private = struct
     | T.DoubleEqual | T.BangEqual -> Some 30
     | T.LogicAnd -> Some 10
     | T.LogicOr -> Some 5
+    | T.QuestionMark -> Some 3
     | T.Equal -> Some 1
     | _ -> None
 
@@ -87,18 +88,30 @@ module Private = struct
     let next_token = Token_stream.peek tokens in
     let rec parse_exp_loop left next =
       match get_precedence next with
-      | Some prec when prec >= min_prec ->
-          if next = T.Equal then
-            let _ = Token_stream.take_token tokens in
-            let right = parse_exp prec tokens in
-            Ast.Assignment (left, right)
-          else
-            let operator = parse_binop tokens in
-            let right = parse_exp (prec + 1) tokens in
-            let left = Ast.Binary (operator, left, right) in
-            parse_exp_loop left (Token_stream.peek tokens)
+      | Some prec when prec >= min_prec -> (
+          match next with
+          | T.Equal ->
+              let _ = Token_stream.take_token tokens in
+              let right = parse_exp prec tokens in
+              Ast.Assignment (left, right)
+          | T.QuestionMark ->
+              let middle = parse_conditional_middle tokens in
+              let right = parse_exp prec tokens in
+              Ast.Conditional
+                { condition = left; then_result = middle; else_result = right }
+          | _ ->
+              let operator = parse_binop tokens in
+              let right = parse_exp (prec + 1) tokens in
+              let left = Ast.Binary (operator, left, right) in
+              parse_exp_loop left (Token_stream.peek tokens))
       | _ -> left
+    and parse_conditional_middle tokens =
+      expect T.QuestionMark tokens;
+      let exp = parse_exp 0 tokens in
+      expect T.Colon tokens;
+      exp
     in
+
     parse_exp_loop initial_factor next_token
 
   let rec parse_block_item tokens =
@@ -132,6 +145,19 @@ module Private = struct
     | T.Semicolon ->
         let _ = Token_stream.take_token tokens in
         Ast.Null
+    | T.KWIf ->
+        let _ = Token_stream.take_token tokens in
+        expect T.LParen tokens;
+        let condition = parse_exp 0 tokens in
+        expect T.RParen tokens;
+        let then_clause = parse_statement tokens
+        and else_clause =
+          if Token_stream.peek tokens = T.KWElse then
+            let _ = Token_stream.take_token tokens in
+            Some (parse_statement tokens)
+          else None
+        in
+        Ast.If { condition; then_clause; else_clause }
     | _ ->
         let exp = parse_exp 0 tokens in
         expect T.Semicolon tokens;

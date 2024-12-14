@@ -4,6 +4,7 @@ type exp =
   | Unary of unary_operator * exp
   | Binary of binary_operator * exp * exp
   | Assignment of exp * exp
+  | Conditional of { condition : exp; then_result : exp; else_result : exp }
 [@@deriving show]
 
 and unary_operator = Complement | Negate | Not [@@deriving show]
@@ -24,14 +25,24 @@ and binary_operator =
   | GreaterOrEqual
 [@@deriving show]
 
-type statement = Return of exp | Expression of exp | Null [@@deriving show]
+type statement =
+  | Return of exp
+  | Expression of exp
+  | If of {
+      condition : exp;
+      then_clause : statement;
+      else_clause : statement option;
+    }
+  | Null
+[@@deriving show]
 
 and declaration = Declaration of { name : string; init : exp option }
 [@@deriving show]
 
 and block_item = S of statement | D of declaration [@@deriving show]
 
-type function_definition = Function of { name : string; body : block_item list }
+type function_definition =
+  | Function of { name : string; body : block_item list }
 [@@deriving show]
 
 type t = Program of function_definition [@@deriving show]

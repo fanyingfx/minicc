@@ -14,7 +14,6 @@ let show_byte_operand = function
   | Reg R11 -> "%r11b"
   | other ->  
     let rs = show_operand other in 
-    print_endline rs;
     rs
 
 

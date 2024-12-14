@@ -37,7 +37,27 @@ let rec emit_tacky_for_exp = function
         instructions @:: T.Copy { src = result; dst = Var v }
       in
       (new_insttruction, T.Var v)
-  | Ast.Assignment _ -> failwith "Internal error: bad lvalue" [@coverage off]
+  | Ast.Assignment _ -> failwith "Internal error: bad lvalue"
+  | Ast.Conditional { condition; then_result; else_result } ->
+      emit_conditiona_exp condition then_result else_result
+
+and emit_conditiona_exp condition then_result else_result =
+  let eval_condition, cond_var = emit_tacky_for_exp condition in
+  let else_label = Unique_ids.make_label "else" in
+  let end_label = Unique_ids.make_label "if_end" in
+  let eval_then, then_val = emit_tacky_for_exp then_result in
+  let eval_else, else_val = emit_tacky_for_exp else_result in
+  let dst_name = Unique_ids.make_temporary () in
+  let dst = T.Var dst_name in
+  let instructions =
+    eval_condition
+    @ [ T.JumpIfZero (cond_var, else_label) ]
+    @ eval_then
+    @ [ T.Copy { src = then_val; dst }; T.Jump end_label; T.Label else_label ]
+    @ eval_else
+    @ [ T.Copy { src = else_val; dst }; T.Label end_label ]
+  in
+  (instructions, dst)
 
 and emit_unary_exp op inner =
   let eval_inner, variable = emit_tacky_for_exp inner in
@@ -106,13 +126,43 @@ and emit_or_exp e1 e2 =
   in
   (instructions, dst)
 
-let emit_tacky_for_statement = function
+let rec emit_tacky_for_statement = function
   | Ast.Return e ->
       let eval_exp, variable = emit_tacky_for_exp e in
       eval_exp @:: T.Return variable
   | Ast.Expression exp ->
       let eval_exp, _variable = emit_tacky_for_exp exp in
       eval_exp
+  | Ast.If { condition; then_clause; else_clause = None } ->
+      let eval_condition, cond_val = emit_tacky_for_exp condition in
+      let cond_var_name = Unique_ids.make_temporary () in
+      let cond_var = T.Var cond_var_name in
+      let end_label = Unique_ids.make_label "if_end" in
+      let eval_then = emit_tacky_for_statement then_clause in
+      eval_condition
+      @ [
+          T.Copy { src = cond_val; dst = cond_var };
+          T.JumpIfZero (cond_var, end_label);
+        ]
+      @ eval_then
+      @:: T.Label end_label
+  | Ast.If { condition; then_clause; else_clause = Some else_clause } ->
+      let eval_condition, cond_val = emit_tacky_for_exp condition in
+      let cond_var_name = Unique_ids.make_temporary () in
+      let cond_var = T.Var cond_var_name in
+      let else_label = Unique_ids.make_label "else" in
+      let end_label = Unique_ids.make_label "if_end" in
+      let eval_then = emit_tacky_for_statement then_clause in
+      let eval_else = emit_tacky_for_statement else_clause in
+      eval_condition
+      @ [
+          T.Copy { src = cond_val; dst = cond_var };
+          T.JumpIfZero (cond_var, else_label);
+        ]
+      @ eval_then
+      @ [ T.Jump end_label; T.Label else_label ]
+      @ eval_else
+      @:: T.Label end_label
   | Ast.Null -> []
 
 let emit_tacky_for_block_item = function

@@ -42,7 +42,15 @@ let make_int lexer =
   let value = eat_while lexer is_digit in
   T.Constant (int_of_string value)
 
-let keywords = T.[ ("int", KWInt); ("void", KWVoid); ("return", KWReturn) ]
+let keywords =
+  T.
+    [
+      ("int", KWInt);
+      ("void", KWVoid);
+      ("return", KWReturn);
+      ("if", KWIf);
+      ("else", KWElse);
+    ]
 
 let make_ident_or_keywords lexer =
   let is_alphabet_opt = function
@@ -88,6 +96,8 @@ let next_token lexer =
         | '*' -> Star
         | '/' -> Slash
         | '%' -> Percent
+        | '?' -> QuestionMark
+        | ':' -> Colon
         | '&' -> make_token_lookahead '&' T.LogicAnd T.Invalid lexer
         | '-' -> make_token_lookahead '-' T.DoubleHyphen T.Hyphen lexer
         | '|' -> make_token_lookahead '|' T.LogicOr T.Invalid lexer
