@@ -18,6 +18,7 @@ type t =
   | Star
   | Slash
   | Percent
+  | Equal
   | Bang (* ! *)
   | LogicAnd (* && *)
   | LogicOr (* || *)

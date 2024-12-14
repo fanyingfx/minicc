@@ -5,6 +5,7 @@ module Private : sig
   val parse_int : Token_stream.t -> Ast.exp
   val parse_exp : int -> Token_stream.t -> Ast.exp
   val parse_statement : Token_stream.t -> Ast.statement
+  val parse_block_item: Token_stream.t -> Ast.block_item
   val parse_function_definition : Token_stream.t -> Ast.function_definition
   val parse_program : Token_stream.t -> Ast.t
 end

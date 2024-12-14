@@ -27,9 +27,17 @@ let convert_binop = function
 let rec emit_tacky_for_exp = function
   | Ast.Constant c -> ([], T.Constant c)
   | Ast.Unary (op, inner) -> emit_unary_exp op inner
+  | Ast.Var v -> ([], T.Var v)
   | Ast.Binary (And, e1, e2) -> emit_and_exp e1 e2
   | Ast.Binary (Or, e1, e2) -> emit_or_exp e1 e2
   | Ast.Binary (op, e1, e2) -> emit_binary_exp op e1 e2
+  | Ast.Assignment (Var v, rhs) ->
+      let instructions, result = emit_tacky_for_exp rhs in
+      let new_insttruction =
+        instructions @:: T.Copy { src = result; dst = Var v }
+      in
+      (new_insttruction, T.Var v)
+  | Ast.Assignment _ -> failwith "Internal error: bad lvalue" [@coverage off]
 
 and emit_unary_exp op inner =
   let eval_inner, variable = emit_tacky_for_exp inner in
@@ -57,8 +65,8 @@ and emit_binary_exp op e1 e2 =
 and emit_and_exp e1 e2 =
   let eval_v1, v1 = emit_tacky_for_exp e1 in
   let eval_v2, v2 = emit_tacky_for_exp e2 in
-  let false_lable = Unique_ids.make_lable "and_false" in
-  let end_lable = Unique_ids.make_lable "and_end" in
+  let false_lable = Unique_ids.make_label "and_false" in
+  let end_lable = Unique_ids.make_label "and_end" in
   let dst_name = Unique_ids.make_temporary () in
   let dst = T.Var dst_name in
   let instructions =
@@ -75,11 +83,12 @@ and emit_and_exp e1 e2 =
       ]
   in
   (instructions, dst)
-and emit_or_exp e1 e2 = 
+
+and emit_or_exp e1 e2 =
   let eval_v1, v1 = emit_tacky_for_exp e1 in
   let eval_v2, v2 = emit_tacky_for_exp e2 in
-  let true_lable = Unique_ids.make_lable "or_true" in
-  let end_lable = Unique_ids.make_lable "or_end" in
+  let true_lable = Unique_ids.make_label "or_true" in
+  let end_lable = Unique_ids.make_label "or_end" in
   let dst_name = Unique_ids.make_temporary () in
   let dst = T.Var dst_name in
   let instructions =
@@ -101,10 +110,24 @@ let emit_tacky_for_statement = function
   | Ast.Return e ->
       let eval_exp, variable = emit_tacky_for_exp e in
       eval_exp @:: T.Return variable
+  | Ast.Expression exp ->
+      let eval_exp, _variable = emit_tacky_for_exp exp in
+      eval_exp
+  | Ast.Null -> []
+
+let emit_tacky_for_block_item = function
+  | Ast.S s -> emit_tacky_for_statement s
+  | Ast.D (Declaration { name; init = Some e }) ->
+      let eval_assignemnt, _assignment =
+        emit_tacky_for_exp (Ast.Assignment (Var name, e))
+      in
+      eval_assignemnt
+  | Ast.D (Declaration { init = None; _ }) -> []
 
 let emit_tacky_for_function = function
   | Ast.Function { name; body } ->
-      let instructions = emit_tacky_for_statement body in
-      T.Function { name; body = instructions }
+      let body_instructions = List.concat_map emit_tacky_for_block_item body in
+      let extra_return = T.(Return (Constant 0)) in
+      T.Function { name; body = body_instructions @:: extra_return }
 
 let gen (Ast.Program fn_def) = T.Program (emit_tacky_for_function fn_def)

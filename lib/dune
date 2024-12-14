@@ -19,6 +19,7 @@
   instruction_fixup
   unique_ids
   settings
+  resolve
   utils)
  (libraries camlp-streams)
  (preprocess

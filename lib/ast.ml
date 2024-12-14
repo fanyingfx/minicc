@@ -1,7 +1,9 @@
 type exp =
   | Constant of int
+  | Var of string
   | Unary of unary_operator * exp
   | Binary of binary_operator * exp * exp
+  | Assignment of exp * exp
 [@@deriving show]
 
 and unary_operator = Complement | Negate | Not [@@deriving show]
@@ -22,9 +24,14 @@ and binary_operator =
   | GreaterOrEqual
 [@@deriving show]
 
-type statement = Return of exp [@@deriving show]
+type statement = Return of exp | Expression of exp | Null [@@deriving show]
 
-type function_definition = Function of { name : string; body : statement }
+and declaration = Declaration of { name : string; init : exp option }
+[@@deriving show]
+
+and block_item = S of statement | D of declaration [@@deriving show]
+
+type function_definition = Function of { name : string; body : block_item list }
 [@@deriving show]
 
 type t = Program of function_definition [@@deriving show]

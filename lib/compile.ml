@@ -1,8 +1,9 @@
 let lex content = content |> Lexer.lex
 let parse content = content |> lex |> Parser.parse
+let validate_ast ast = ast |> Resolve.resolve
 
 let tacky_gen content src_file =
-  let tacky = Tacky_gen.gen (parse content) in
+  let tacky = Tacky_gen.gen (parse content |> validate_ast) in
   Tacky_print.debug_print_tacky src_file tacky;
   tacky
 
@@ -27,6 +28,7 @@ let compile stage src_file =
   match stage with
   | Settings.Lex -> ignore (lex content)
   | Settings.Parse -> ignore (parse content)
+  | Settings.Validate -> ignore (parse content |> validate_ast)
   | Settings.Tacky -> ignore (tacky_gen content src_file)
   | Settings.Codegen -> ignore (gen content src_file)
   | Settings.Assembly | Settings.Executable -> emit content src_file

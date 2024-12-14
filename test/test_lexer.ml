@@ -30,3 +30,6 @@ let%test "compare" =
 
 let%test "logical" =
   Lexer.lex "!&&||==!=" = [ Bang; LogicAnd; LogicOr; DoubleEqual; BangEqual ]
+
+let%test "assign" =
+  Lexer.lex "=" = [Equal]

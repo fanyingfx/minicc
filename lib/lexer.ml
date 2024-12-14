@@ -91,7 +91,7 @@ let next_token lexer =
         | '&' -> make_token_lookahead '&' T.LogicAnd T.Invalid lexer
         | '-' -> make_token_lookahead '-' T.DoubleHyphen T.Hyphen lexer
         | '|' -> make_token_lookahead '|' T.LogicOr T.Invalid lexer
-        | '=' -> make_token_lookahead '=' T.DoubleEqual T.Invalid lexer
+        | '=' -> make_token_lookahead '=' T.DoubleEqual T.Equal lexer
         | '!' -> make_token_lookahead '=' T.BangEqual T.Bang lexer
         | '<' -> make_token_lookahead '=' T.LessOrEqual T.LessThan lexer
         | '>' -> make_token_lookahead '=' T.GreaterOrEqual T.GreaterThan lexer

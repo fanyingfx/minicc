@@ -64,6 +64,7 @@ module Private = struct
     | T.DoubleEqual | T.BangEqual -> Some 30
     | T.LogicAnd -> Some 10
     | T.LogicOr -> Some 5
+    | T.Equal -> Some 1
     | _ -> None
 
   let rec parse_factor tokens =
@@ -78,6 +79,7 @@ module Private = struct
         let inner_exp = parse_exp 0 tokens in
         expect T.RParen tokens;
         inner_exp
+    | T.Identifier _ -> Ast.Var (parse_id tokens)
     | t -> raise_error ~expected:(Name "an expression") ~actual:t
 
   and parse_exp min_prec tokens =
@@ -86,19 +88,54 @@ module Private = struct
     let rec parse_exp_loop left next =
       match get_precedence next with
       | Some prec when prec >= min_prec ->
-          let operator = parse_binop tokens in
-          let right = parse_exp (prec + 1) tokens in
-          let left = Ast.Binary (operator, left, right) in
-          parse_exp_loop left (Token_stream.peek tokens)
+          if next = T.Equal then
+            let _ = Token_stream.take_token tokens in
+            let right = parse_exp prec tokens in
+            Ast.Assignment (left, right)
+          else
+            let operator = parse_binop tokens in
+            let right = parse_exp (prec + 1) tokens in
+            let left = Ast.Binary (operator, left, right) in
+            parse_exp_loop left (Token_stream.peek tokens)
       | _ -> left
     in
     parse_exp_loop initial_factor next_token
 
-  let parse_statement tokens =
-    expect T.KWReturn tokens;
-    let exp = parse_exp 0 tokens in
-    expect T.Semicolon tokens;
-    Ast.Return exp
+  let rec parse_block_item tokens =
+    match Token_stream.peek tokens with
+    | T.KWInt -> Ast.D (parse_declaration tokens)
+    | _ -> Ast.S (parse_statement tokens)
+
+  and parse_declaration tokens =
+    expect T.KWInt tokens;
+    let var_name = parse_id tokens in
+    let init =
+      match Token_stream.take_token tokens with
+      | T.Semicolon -> None
+      | T.Equal ->
+          let init_exp = parse_exp 0 tokens in
+          expect T.Semicolon tokens;
+          Some init_exp
+      | other ->
+          raise_error ~expected:(Name "An initializer or semicolon")
+            ~actual:other
+    in
+    Ast.Declaration { name = var_name; init }
+
+  and parse_statement tokens =
+    match Token_stream.peek tokens with
+    | T.KWReturn ->
+        let _ = Token_stream.take_token tokens in
+        let exp = parse_exp 0 tokens in
+        expect T.Semicolon tokens;
+        Ast.Return exp
+    | T.Semicolon ->
+        let _ = Token_stream.take_token tokens in
+        Ast.Null
+    | _ ->
+        let exp = parse_exp 0 tokens in
+        expect T.Semicolon tokens;
+        Ast.Expression exp
 
   let parse_function_definition tokens =
     expect T.KWInt tokens;
@@ -107,7 +144,16 @@ module Private = struct
     expect T.KWVoid tokens;
     expect T.RParen tokens;
     expect T.LBrace tokens;
-    let body = parse_statement tokens in
+    let rec parse_block_item_loop () =
+      match Token_stream.peek tokens with
+      | T.RBrace -> []
+      | _ ->
+          let stmt = parse_block_item tokens in
+          stmt :: parse_block_item_loop ()
+    in
+    let body = parse_block_item_loop () in
+    expect Token_type.RBrace tokens;
+
     Ast.Function { name; body }
 
   let parse_program tokens = Ast.Program (parse_function_definition tokens)

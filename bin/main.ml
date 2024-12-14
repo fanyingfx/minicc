@@ -43,7 +43,11 @@ let driver debug stage src =
 let stage =
   let lex = (Settings.Lex, Arg.info [ "lex" ] ~doc:"Run the lexer")
   and parse =
-    (Settings.Parse, Arg.info [ "parse" ] ~doc:"Rune the lexer and parser")
+    (Settings.Parse, Arg.info [ "parse" ] ~doc:"Run the lexer and parser")
+  and validate =
+    ( Settings.Validate,
+      Arg.info [ "validate" ] ~doc:"Run the lexer and parser and validatation"
+    )
   and tacky =
     ( Settings.Tacky,
       Arg.info [ "tacky" ] ~doc:"Run the lexer and parser and tacky generator"
@@ -56,7 +60,9 @@ let stage =
     (Settings.Assembly, Arg.info [ "s"; "S" ] ~doc)
   in
   Arg.(
-    value & vflag Settings.Executable [ lex; parse; tacky; codegen; assembly ])
+    value
+    & vflag Settings.Executable
+        [ lex; parse; validate; tacky; codegen; assembly ])
 
 let debug =
   let doc =
