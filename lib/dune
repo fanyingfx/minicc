@@ -22,7 +22,6 @@
   unique_ids
   settings
   utils)
- (libraries camlp-streams)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
    (instrumentation

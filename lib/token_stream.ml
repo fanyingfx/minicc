@@ -1,17 +1,21 @@
-type t = Token_type.t Stream.t
+type t = Token_type.t list ref
 
 exception End_of_stream
 
 let take_token tokens =
-  try Stream.next tokens with Stream.Failure -> raise End_of_stream
+  match !tokens with
+  | [] -> raise End_of_stream
+  | hd :: tail ->
+      tokens := tail;
+      hd
 
-let peek tokens =
-  match Stream.peek tokens with Some t -> t | None -> raise End_of_stream
+(* try Stream.next tokens with Stream.Failure -> raise End_of_stream *)
 
-let is_empty tokens =
-  try
-    Stream.empty tokens;
-    true
-  with Stream.Failure -> false
+(* let peek tokens = match Stream.peek tokens with Some t -> t | None -> raise
+   End_of_stream *)
+let peek tokens = match !tokens with [] -> raise End_of_stream | hd :: _ -> hd
 
-let of_list = Stream.of_list
+(* let is_empty tokens = try Stream.empty tokens; true with Stream.Failure ->
+   false *)
+let is_empty tokens = match !tokens with [] -> true | _ -> false
+let of_list list = ref list
