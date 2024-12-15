@@ -16,7 +16,7 @@ let pp_binary_operator out = function
   | LessThan -> Format.pp_print_string out "<"
   | LessOrEqual -> Format.pp_print_string out "<="
   | GreaterThan -> Format.pp_print_string out ">"
-  | GreaterOrEqual -> Format.pp_print_string out "<="
+  | GreaterOrEqual -> Format.pp_print_string out ">="
 
 let pp_tacky_val out = function
   | Constant i -> Format.pp_print_int out i

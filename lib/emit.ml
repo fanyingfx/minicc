@@ -59,7 +59,7 @@ let emit_instruction chan = function
         (show_operand src) (show_operand dst)
   | Idiv operand ->
       Printf.fprintf chan "\t%s %s\n" "idivl" (show_operand operand)
-  | Cdq -> Printf.fprintf chan "cdq"
+  | Cdq -> Printf.fprintf chan "cdq\n"
   | AllocateStack i -> Printf.fprintf chan "subq $%d, %%rsp\n" i
   | Ret -> Printf.fprintf chan {|
   movq %%rbp, %%rsp

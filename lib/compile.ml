@@ -1,6 +1,6 @@
 let lex content = content |> Lexer.lex
 let parse content = content |> lex |> Parser.parse
-let validate_ast ast = ast |> Resolve.resolve
+let validate_ast ast = ast |> Resolve.resolve |> Label_loops.label_loops
 
 let tacky_gen content src_file =
   let tacky = Tacky_gen.gen (parse content |> validate_ast) in

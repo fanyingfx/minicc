@@ -3,6 +3,8 @@ module T = struct
 end
 
 let ( @:: ) xs x = xs @ [ x ]
+let break_label id = "break." ^ id
+let continue_label id = "continue." ^ id
 
 let convert_unop = function
   | Ast.Complement -> T.Complement
@@ -133,47 +135,92 @@ let rec emit_tacky_for_statement = function
   | Ast.Expression exp ->
       let eval_exp, _variable = emit_tacky_for_exp exp in
       eval_exp
-  | Ast.If { condition; then_clause; else_clause = None } ->
+  | Ast.If { condition; then_clause; else_clause } ->
+      emit_tacky_for_if_statement condition then_clause else_clause
+  | Ast.DoWhile { condition; body; id } ->
+      emit_tacky_for_doloop body condition id
+  | Ast.While { condition; body; id } ->
+      emit_tacky_for_while_loop condition body id
+  | Ast.For { init; condition; post; body; id } ->
+      emit_tacky_for_for_loop init condition post body id
+  | Ast.Compound (Block block) -> emit_tacky_for_block block
+  | Ast.Break id -> [ T.Jump (break_label id) ]
+  | Ast.Continue id -> [ T.Jump (continue_label id) ]
+  | Ast.Null -> []
+
+and emit_tacky_for_if_statement condition then_clause = function
+  | None ->
       let eval_condition, cond_val = emit_tacky_for_exp condition in
-      let cond_var_name = Unique_ids.make_temporary () in
-      let cond_var = T.Var cond_var_name in
       let end_label = Unique_ids.make_label "if_end" in
       let eval_then = emit_tacky_for_statement then_clause in
       eval_condition
-      @ [
-          T.Copy { src = cond_val; dst = cond_var };
-          T.JumpIfZero (cond_var, end_label);
-        ]
-      @ eval_then
+      @ (T.JumpIfZero (cond_val, end_label) :: eval_then)
       @:: T.Label end_label
-  | Ast.If { condition; then_clause; else_clause = Some else_clause } ->
+  | Some else_clause ->
       let eval_condition, cond_val = emit_tacky_for_exp condition in
-      let cond_var_name = Unique_ids.make_temporary () in
-      let cond_var = T.Var cond_var_name in
       let else_label = Unique_ids.make_label "else" in
       let end_label = Unique_ids.make_label "if_end" in
       let eval_then = emit_tacky_for_statement then_clause in
       let eval_else = emit_tacky_for_statement else_clause in
       eval_condition
-      @ [
-          T.Copy { src = cond_val; dst = cond_var };
-          T.JumpIfZero (cond_var, else_label);
-        ]
-      @ eval_then
+      @ (T.JumpIfZero (cond_val, else_label) :: eval_then)
       @ [ T.Jump end_label; T.Label else_label ]
       @ eval_else
       @:: T.Label end_label
-  | Ast.Compound (Block block) -> emit_tacky_for_block block
-  | Ast.Null -> []
+
+and emit_tacky_for_doloop body condition id =
+  let start_label = Unique_ids.make_label "do_loop_start" in
+  let cont_label = continue_label id in
+  let break_label = break_label id in
+  let eval_condition, cond_val = emit_tacky_for_exp condition in
+  let eval_body = emit_tacky_for_statement body in
+  (T.Label start_label :: eval_body)
+  @ (T.Label cont_label :: eval_condition)
+  @ [ T.JumpIfNotZero (cond_val, start_label); Label break_label ]
+
+and emit_tacky_for_while_loop condition body id =
+  let cont_label = continue_label id in
+  let break_label = break_label id in
+  let eval_condition, cond_val = emit_tacky_for_exp condition in
+  let eval_body = emit_tacky_for_statement body in
+  (T.Label cont_label :: eval_condition)
+  @ [ T.JumpIfZero (cond_val, break_label) ]
+  @ eval_body
+  @ [ T.Jump cont_label; Label break_label ]
+
+and emit_tacky_for_for_loop init condition post body id =
+  let start_label = Unique_ids.make_label "for_loop_start"
+  and cont_label = continue_label id
+  and break_label = break_label id in
+  let eval_init =
+    match init with
+    | InitDecl d -> emit_declaration d
+    | InitExp None -> []
+    | InitExp (Some exp) -> fst (emit_tacky_for_exp exp)
+  and eval_condition =
+    match Option.map emit_tacky_for_exp condition with
+    | Some (insts, v) -> insts @ [ T.JumpIfZero (v, break_label) ]
+    | None -> []
+  and eval_post =
+    match post with Some exp -> fst (emit_tacky_for_exp exp) | None -> []
+  and eval_body = emit_tacky_for_statement body in
+  eval_init
+  @ (T.Label start_label :: eval_condition)
+  @ eval_body
+  @ (T.Label cont_label :: eval_post)
+  @ [ T.Jump start_label; T.Label break_label ]
 
 and emit_tacky_for_block_item = function
   | Ast.S s -> emit_tacky_for_statement s
-  | Ast.D (Declaration { name; init = Some e }) ->
+  | Ast.D d -> emit_declaration d
+
+and emit_declaration = function
+  | Ast.Declaration { name; init = Some e } ->
       let eval_assignemnt, _assignment =
         emit_tacky_for_exp (Ast.Assignment (Var name, e))
       in
       eval_assignemnt
-  | Ast.D (Declaration { init = None; _ }) -> []
+  | Ast.Declaration { init = None; _ } -> []
 
 and emit_tacky_for_block block = List.concat_map emit_tacky_for_block_item block
 

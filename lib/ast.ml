@@ -34,6 +34,17 @@ type statement =
       else_clause : statement option;
     }
   | Compound of block
+  | Break of string
+  | Continue of string
+  | While of { condition : exp; body : statement; id : string }
+  | DoWhile of { body : statement; condition : exp; id : string }
+  | For of {
+      init : for_init;
+      condition : exp option;
+      post : exp option;
+      body : statement;
+      id : string;
+    }
   | Null
 [@@deriving show]
 
@@ -42,9 +53,9 @@ and declaration = Declaration of { name : string; init : exp option }
 
 and block_item = S of statement | D of declaration [@@deriving show]
 and block = Block of block_item list
+and for_init = InitDecl of declaration | InitExp of exp option
 
-type function_definition =
-  | Function of { name : string; body : block }
+type function_definition = Function of { name : string; body : block }
 [@@deriving show]
 
 type t = Program of function_definition [@@deriving show]

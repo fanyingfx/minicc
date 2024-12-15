@@ -61,7 +61,32 @@ let rec resolve_statement var_map = function
       let new_var_map = copy_variable_map var_map in
       let new_block = resolve_block new_var_map block in
       Compound (Block new_block)
+  | For { init; condition; post; body; id } ->
+      let var_map = copy_variable_map var_map in
+      let new_var_map, new_init = resolve_for_init var_map init in
+      let new_condition = resolve_optional_exp new_var_map condition in
+      let new_post = resolve_optional_exp new_var_map post in
+      let new_body = resolve_statement new_var_map body in 
+      For { init=new_init; condition=new_condition; post=new_post; body=new_body; id }
+  | While { condition; body; id } ->
+      let new_condition = resolve_exp var_map condition in
+      let new_body = resolve_statement var_map body in
+      While { condition = new_condition; body = new_body; id }
+  | DoWhile { condition; body; id } ->
+      let new_condition = resolve_exp var_map condition in
+      let new_body = resolve_statement var_map body in
+      DoWhile { condition = new_condition; body = new_body; id }
+  | Break id -> Break id
+  | Continue id -> Continue id
   | Null -> Null
+
+and resolve_for_init var_map = function
+  | InitExp e -> (var_map, InitExp (resolve_optional_exp var_map e))
+  | InitDecl d ->
+      let new_map, new_d = resolve_declaration var_map d in
+      (new_map, InitDecl new_d)
+
+and resolve_optional_exp var_map = Option.map (resolve_exp var_map)
 
 and resolve_block var_map block =
   let _var_map, new_block =

@@ -50,16 +50,22 @@ let keywords =
       ("return", KWReturn);
       ("if", KWIf);
       ("else", KWElse);
+      ("do", KWDo);
+      ("while", KWWhile);
+      ("for", KWFor);
+      ("break", KWBreak);
+      ("continue", KWContinue);
     ]
 
 let make_ident_or_keywords lexer =
   let is_alphabet_opt = function
-    | Some ('a' .. 'z' | 'A' .. 'Z' | '_') -> true
+    | Some ('a' .. 'z' | 'A' .. 'Z' | '_'|'0'..'9') -> true
     | _ -> false
   in
   let idstr = eat_while lexer is_alphabet_opt in
-  let kw = List.assoc_opt idstr keywords in
-  match kw with Some kw -> kw | None -> T.Identifier idstr
+  match List.assoc_opt idstr keywords with
+  | Some kw -> kw
+  | None -> T.Identifier idstr
 
 (* skip whitespace should using lexer.ch instead of peek_char lexer *)
 let rec skip_whitespace lexer =

@@ -7,6 +7,11 @@ type t =
   | KWReturn
   | KWIf
   | KWElse
+  | KWDo
+  | KWWhile
+  | KWFor
+  | KWBreak
+  | KWContinue
   (* punctuation *)
   | LParen
   | RParen

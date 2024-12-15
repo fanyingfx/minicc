@@ -3,11 +3,13 @@
 (library
  (name minicc)
  (modules
-  ast
-  lexer
-  parser
   token_type
   token_stream
+  lexer
+  ast
+  parser
+  resolve
+  label_loops
   assembly
   codegen
   emit
@@ -19,7 +21,6 @@
   instruction_fixup
   unique_ids
   settings
-  resolve
   utils)
  (libraries camlp-streams)
  (preprocess

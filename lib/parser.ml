@@ -23,6 +23,8 @@ module Private = struct
     if actual <> expected then raise_error ~expected:(Tok expected) ~actual
     else ()
 
+  let eat_token tokens = ignore (Token_stream.take_token tokens)
+
   let parse_id tokens =
     match Token_stream.take_token tokens with
     | T.Identifier x -> x
@@ -72,8 +74,9 @@ module Private = struct
     let next_token = Token_stream.peek tokens in
     match next_token with
     | T.Constant _ -> parse_int tokens
-    | T.Tilde | T.Hyphen ->
-        let op = parse_unop tokens and inner_exp = parse_exp 0 tokens in
+    | T.Tilde | T.Hyphen |T.Bang ->
+        let op = parse_unop tokens in
+        let  inner_exp = parse_factor tokens in
         Ast.Unary (op, inner_exp)
     | T.LParen ->
         ignore (Token_stream.take_token tokens);
@@ -161,19 +164,66 @@ module Private = struct
     | T.LBrace ->
         let _ = Token_stream.take_token tokens in
         Ast.Compound (parse_block tokens)
+    | T.KWBreak ->
+        let _ = Token_stream.take_token tokens in
+        expect T.Semicolon tokens;
+        Ast.Break ""
+    | T.KWContinue ->
+        let _ = Token_stream.take_token tokens in
+        expect T.Semicolon tokens;
+        Ast.Continue ""
+    | T.KWWhile ->
+        let _ = Token_stream.take_token tokens in
+        expect LParen tokens;
+        let condition = parse_exp 0 tokens in
+        expect RParen tokens;
+        let body = parse_statement tokens in
+        Ast.While { condition; body; id = "" }
+    | T.KWDo ->
+        eat_token tokens;
+        let body = parse_statement tokens in
+        expect KWWhile tokens;
+        expect LParen tokens;
+        let condition = parse_exp 0 tokens in
+        expect RParen tokens;
+        expect Semicolon tokens;
+        Ast.DoWhile { body; condition; id = "" }
+    | T.KWFor ->
+        eat_token tokens;
+        expect LParen tokens;
+        let init = parse_for_init tokens in
+        let condition = parse_optional_exp T.Semicolon tokens in
+        let post = parse_optional_exp T.RParen tokens in
+        let body = parse_statement tokens in
+        Ast.For { init; condition; post; body; id = "" }
     | _ ->
         let exp = parse_exp 0 tokens in
         expect T.Semicolon tokens;
         Ast.Expression exp
 
+  and parse_for_init tokens =
+    if Token_stream.peek tokens = T.KWInt then
+      Ast.InitDecl (parse_declaration tokens)
+    else
+      let opt_e = parse_optional_exp T.Semicolon tokens in
+      Ast.InitExp opt_e
+
+  and parse_optional_exp delim tokens =
+    if Token_stream.peek tokens = delim then (
+      eat_token tokens;
+      None)
+    else
+      let e = parse_exp 0 tokens in
+      expect delim tokens;
+      Some e
+
   and parse_block tokens =
     let rec parse_block_loop () =
       match Token_stream.peek tokens with
-      | T.RBrace -> 
-        []
-      | _ -> 
-        let block_item = parse_block_item tokens in 
-        block_item:: parse_block_loop ()
+      | T.RBrace -> []
+      | _ ->
+          let block_item = parse_block_item tokens in
+          block_item :: parse_block_loop ()
     in
     let block_list = parse_block_loop () in
     expect T.RBrace tokens;
@@ -190,7 +240,10 @@ module Private = struct
 
     Ast.Function { name; body }
 
-  let parse_program tokens = Ast.Program (parse_function_definition tokens)
+  let parse_program tokens = 
+    let fun_def = parse_function_definition tokens in
+    if Token_stream.is_empty tokens then Ast.Program fun_def 
+    else raise (ParseError "unexpected tokens after function definition")
 end
 
 let parse token_list =
