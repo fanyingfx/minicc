@@ -5,6 +5,7 @@ type exp =
   | Binary of binary_operator * exp * exp
   | Assignment of exp * exp
   | Conditional of { condition : exp; then_result : exp; else_result : exp }
+  | FunCall of { name : string; args : exp list }
 [@@deriving show]
 
 and unary_operator = Complement | Negate | Not [@@deriving show]
@@ -48,14 +49,21 @@ type statement =
   | Null
 [@@deriving show]
 
-and declaration = Declaration of { name : string; init : exp option }
+and declaration =
+  | VarDecl of variable_declaration
+  | FunDecl of function_declaration
 [@@deriving show]
+
+and variable_declaration = { name : string; init : exp option }
+
+and function_declaration = {
+  name : string;
+  params : string list;
+  body : block option;
+}
 
 and block_item = S of statement | D of declaration [@@deriving show]
 and block = Block of block_item list
-and for_init = InitDecl of declaration | InitExp of exp option
+and for_init = InitDecl of variable_declaration | InitExp of exp option
 
-type function_definition = Function of { name : string; body : block }
-[@@deriving show]
-
-type t = Program of function_definition [@@deriving show]
+type t = Program of function_declaration list [@@deriving show]

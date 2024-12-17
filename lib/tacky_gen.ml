@@ -42,6 +42,7 @@ let rec emit_tacky_for_exp = function
   | Ast.Assignment _ -> failwith "Internal error: bad lvalue"
   | Ast.Conditional { condition; then_result; else_result } ->
       emit_conditiona_exp condition then_result else_result
+  | Ast.FunCall { name; args } -> emit_fun_call name args
 
 and emit_conditiona_exp condition then_result else_result =
   let eval_condition, cond_var = emit_tacky_for_exp condition in
@@ -128,6 +129,18 @@ and emit_or_exp e1 e2 =
   in
   (instructions, dst)
 
+and emit_fun_call fun_name args =
+  let dst_name = Unique_ids.make_temporary () in
+  let dst = T.Var dst_name in
+  let arg_instructions, arg_vals =
+    List.split (List.map emit_tacky_for_exp args)
+  in
+  let instructions =
+    List.flatten arg_instructions
+    @ [ T.FunCall { fun_name; args = arg_vals; dst } ]
+  in
+  (instructions, dst)
+
 let rec emit_tacky_for_statement = function
   | Ast.Return e ->
       let eval_exp, variable = emit_tacky_for_exp e in
@@ -194,7 +207,7 @@ and emit_tacky_for_for_loop init condition post body id =
   and break_label = break_label id in
   let eval_init =
     match init with
-    | InitDecl d -> emit_declaration d
+    | InitDecl d -> emit_var_declaration d
     | InitExp None -> []
     | InitExp (Some exp) -> fst (emit_tacky_for_exp exp)
   and eval_condition =
@@ -212,22 +225,35 @@ and emit_tacky_for_for_loop init condition post body id =
 
 and emit_tacky_for_block_item = function
   | Ast.S s -> emit_tacky_for_statement s
-  | Ast.D d -> emit_declaration d
+  | Ast.D d -> emit_local_declaration d
 
-and emit_declaration = function
-  | Ast.Declaration { name; init = Some e } ->
+and emit_local_declaration = function
+  | Ast.VarDecl vd -> emit_var_declaration vd
+  | Ast.FunDecl _ -> []
+
+and emit_var_declaration = function
+  | Ast.{ name; init = Some e } ->
       let eval_assignemnt, _assignment =
         emit_tacky_for_exp (Ast.Assignment (Var name, e))
       in
       eval_assignemnt
-  | Ast.Declaration { init = None; _ } -> []
+  | Ast.{ init = None; _ } -> []
 
 and emit_tacky_for_block block = List.concat_map emit_tacky_for_block_item block
 
-let emit_tacky_for_function = function
-  | Ast.Function { name; body = Block block } ->
-      let body_instructions = List.concat_map emit_tacky_for_block_item block in
+let emit_tacky_for_fun_declaration Ast.{ name; params; body } =
+  match body with
+  | Some (Block block_items) ->
+      let body_instructions =
+        List.concat_map emit_tacky_for_block_item block_items
+      in
       let extra_return = T.(Return (Constant 0)) in
-      T.Function { name; body = body_instructions @:: extra_return }
+      Some
+        (T.Function { name; params; body = body_instructions @:: extra_return })
+  | None -> None
 
-let gen (Ast.Program fn_def) = T.Program (emit_tacky_for_function fn_def)
+let emit_tacky_for_program func_list =
+  List.filter_map emit_tacky_for_fun_declaration func_list
+
+let gen (Ast.Program fn_def_list) =
+  T.Program (emit_tacky_for_program fn_def_list)

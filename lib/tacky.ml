@@ -31,11 +31,12 @@ type instruction =
   | Jump of string
   | JumpIfZero of tacky_val * string
   | JumpIfNotZero of tacky_val * string
+  | FunCall of { fun_name : string; args : tacky_val list; dst : tacky_val }
   | Label of string
 [@@deriving show]
 
 type function_definition =
-  | Function of { name : string; body : instruction list }
+  | Function of { name : string; params : string list; body : instruction list }
 [@@deriving show]
 
-type t = Program of function_definition [@@deriving show]
+type t = Program of function_definition list [@@deriving show]

@@ -20,6 +20,9 @@
   replace_pseudos
   instruction_fixup
   unique_ids
+  types
+  symbols
+  typecheck
   settings
   utils)
  (preprocess

@@ -37,6 +37,7 @@ type t =
   | GreaterOrEqual
   | QuestionMark
   | Colon
+  | Comma
   | EOF
   | Invalid
 [@@deriving show, eq]

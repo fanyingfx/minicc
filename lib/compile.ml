@@ -1,6 +1,10 @@
 let lex content = content |> Lexer.lex
 let parse content = content |> lex |> Parser.parse
-let validate_ast ast = ast |> Resolve.resolve |> Label_loops.label_loops
+
+let validate_ast ast =
+  let labeled_ast = ast |> Resolve.resolve |> Label_loops.label_loops in
+  labeled_ast |> Typecheck.typecheck;
+  labeled_ast
 
 let tacky_gen content src_file =
   let tacky = Tacky_gen.gen (parse content |> validate_ast) in
@@ -14,8 +18,8 @@ let gen content src_file =
        Filename.chop_extension src_file ^ ".prealloc.debug.s"
      in
      Emit.emit prealloc_filename asm_ast);
-  let asm_ast1, stack_size = Replace_pseudos.replace_pseudos asm_ast in
-  let asm_ast2 = Instruction_fixup.fixup_program stack_size asm_ast1 in
+  let asm_ast1= Replace_pseudos.replace_pseudos asm_ast in
+  let asm_ast2 = Instruction_fixup.fixup_program asm_ast1 in
   asm_ast2
 
 let emit src src_file =
@@ -31,4 +35,5 @@ let compile stage src_file =
   | Settings.Validate -> ignore (parse content |> validate_ast)
   | Settings.Tacky -> ignore (tacky_gen content src_file)
   | Settings.Codegen -> ignore (gen content src_file)
-  | Settings.Assembly | Settings.Executable -> emit content src_file
+  | Settings.Assembly | Settings.Obj | Settings.Executable ->
+      emit content src_file

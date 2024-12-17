@@ -27,10 +27,10 @@ let from_string content =
   advance_char lexer;
   lexer
 
-let eat_while lexer f =
+let eat_while lexer predicate =
   let start_pos = lexer.position - 1 in
   let rec make_str lexer =
-    if f (peek_char lexer) then (
+    if predicate (peek_char lexer) then (
       advance_char lexer;
       make_str lexer)
     else String.sub lexer.content start_pos (lexer.position - start_pos)
@@ -38,7 +38,10 @@ let eat_while lexer f =
   make_str lexer
 
 let make_int lexer =
-  let is_digit = function Some '0' .. '9' -> true | _ -> false in
+  let is_digit = function 
+  Some '0' .. '9' -> true 
+  | Some (('a'..'z'|'A'..'Z') as c) -> raise (LexError c)
+  | _ -> false in
   let value = eat_while lexer is_digit in
   T.Constant (int_of_string value)
 
@@ -104,6 +107,7 @@ let next_token lexer =
         | '%' -> Percent
         | '?' -> QuestionMark
         | ':' -> Colon
+        | ',' -> Comma
         | '&' -> make_token_lookahead '&' T.LogicAnd T.Invalid lexer
         | '-' -> make_token_lookahead '-' T.DoubleHyphen T.Hyphen lexer
         | '|' -> make_token_lookahead '|' T.LogicOr T.Invalid lexer

@@ -26,13 +26,13 @@ let%test "statement" = Test.parse_stmt "return 4;" = Ast.Return (Ast.Constant 4)
 
 let%test "assignment" =
   Test.parse_block_item "int a=3;"
-  = Ast.D (Ast.Declaration { name = "a"; init = Some (Ast.Constant 3) })
+  = Ast.D (Ast.VarDecl{ name = "a"; init = Some (Ast.Constant 3) })
 
 let%test "assignment right assoc" =
   Test.parse_block_item "int a=b=3;"
   = Ast.(
       D
-        (Declaration
+        (VarDecl
            { name = "a"; init = Some (Assignment (Var "b", Constant 3)) }))
 
 let%test "error" =
