@@ -1,4 +1,10 @@
-type operand = Imm of int | Reg of reg | Pseudo of string | Stack of int
+type operand =
+  | Imm of int
+  | Reg of reg
+  | Pseudo of string
+  | Stack of int
+  | Data of string
+
 and reg = AX | CX | DX | DI | SI | R8 | R9 | R10 | R11
 
 type unary_operator = Neg | Not
@@ -22,7 +28,12 @@ type instruction =
   | Call of string
   | Ret
 
-type function_definition =
-  | Function of { name : string; instructions : instruction list }
+type top_level =
+  | Function of {
+      name : string;
+      global : bool;
+      instructions : instruction list;
+    }
+  | StaticVariable of { name : string; global : bool; init : int }
 
-type t = Program of function_definition list
+type t = Program of top_level list

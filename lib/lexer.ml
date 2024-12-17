@@ -58,6 +58,8 @@ let keywords =
       ("for", KWFor);
       ("break", KWBreak);
       ("continue", KWContinue);
+      ("static",KWStatic);
+      ("extern",KWExtern)
     ]
 
 let make_ident_or_keywords lexer =

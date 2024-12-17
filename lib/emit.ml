@@ -15,6 +15,7 @@ let show_operand = function
   | Reg r -> show_reg r
   | Imm i -> Printf.sprintf "$%d" i
   | Stack i -> Printf.sprintf "%d(%%rbp)" i
+  | Data name -> Printf.sprintf "%s(%%rip)" name
   | Pseudo name -> Printf.sprintf "%%%s" name
 
 let show_byte_reg = function
@@ -88,8 +89,7 @@ let emit_instruction chan = function
       Printf.fprintf chan "\t%s %s, %s\n"
         (show_binary_instruciton operator)
         (show_operand src) (show_operand dst)
-  | Idiv operand ->
-      Printf.fprintf chan "\t%s %s\n" "idivl" (show_operand operand)
+  | Idiv operand -> Printf.fprintf chan "\tidivl %s\n" (show_operand operand)
   | Cdq -> Printf.fprintf chan "cdq\n"
   | AllocateStack i -> Printf.fprintf chan "subq $%d, %%rsp\n" i
   | DeallocateStack i -> Printf.fprintf chan "\taddq $%d, %%rsp\n" i
@@ -100,16 +100,41 @@ let emit_instruction chan = function
   popq %%rbp
   ret
 |}
-
-let emit_function chan (Function { name; instructions }) =
-  Printf.fprintf chan {|
-  .global %s
+let emit_global_directive chan global label =
+  if global then Printf.fprintf chan "\t.globl %s\n" label else ()
+let emit_tl chan = function
+  | Function { name; global; instructions } ->
+      let label = name in
+      emit_global_directive chan global label;
+      Printf.fprintf chan {|
+  .text
 %s:
   pushq %%rbp
   movq %%rsp, %%rbp
   |}
-    name name;
-  List.iter (emit_instruction chan) instructions
+        label;
+      List.iter (emit_instruction chan) instructions
+  | StaticVariable { name; global; init = 0 } ->
+      let label = name in
+      emit_global_directive chan global label;
+      Printf.fprintf chan
+        {|
+    .bss
+    .align 4
+%s:
+    .zero 4
+|}
+        label
+  | StaticVariable { name; global; init } ->
+      let label = name in
+      emit_global_directive chan global label;
+      Printf.fprintf chan {|
+  .data
+  .align 4
+%s:
+  .long %d
+|}
+        label init
 
 let _emit_intel_syntax chan = Printf.fprintf chan ".intel_syntax noprefix;\n"
 
@@ -119,6 +144,6 @@ let emit_stack_note chan =
 let emit assembly_file (Program function_defs) =
   let output_channel = open_out assembly_file in
   (* emit_intel_syntax output_channel; *)
-  List.iter (emit_function output_channel) function_defs;
+  List.iter (emit_tl output_channel) function_defs;
   emit_stack_note output_channel;
   close_out output_channel

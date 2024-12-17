@@ -228,11 +228,12 @@ and emit_tacky_for_block_item = function
   | Ast.D d -> emit_local_declaration d
 
 and emit_local_declaration = function
+| Ast.VarDecl {storage_class=Some _;_}->[]
   | Ast.VarDecl vd -> emit_var_declaration vd
   | Ast.FunDecl _ -> []
 
 and emit_var_declaration = function
-  | Ast.{ name; init = Some e } ->
+  | Ast.{ name; init = Some e; _ } ->
       let eval_assignemnt, _assignment =
         emit_tacky_for_exp (Ast.Assignment (Var name, e))
       in
@@ -241,19 +242,32 @@ and emit_var_declaration = function
 
 and emit_tacky_for_block block = List.concat_map emit_tacky_for_block_item block
 
-let emit_tacky_for_fun_declaration Ast.{ name; params; body } =
-  match body with
-  | Some (Block block_items) ->
+let emit_fun_decl = function
+  | Ast.FunDecl { name; params; body = Some (Block block_items); _ } ->
+      let global = Symbols.is_global name in
       let body_instructions =
         List.concat_map emit_tacky_for_block_item block_items
       in
       let extra_return = T.(Return (Constant 0)) in
       Some
-        (T.Function { name; params; body = body_instructions @:: extra_return })
-  | None -> None
+        (T.Function
+           { name; global; params; body = body_instructions @:: extra_return })
+  | _ -> None
 
-let emit_tacky_for_program func_list =
-  List.filter_map emit_tacky_for_fun_declaration func_list
+let convert_symbols_to_tacky all_symbols =
+  let to_var (name, entry) =
+    match entry.Symbols.attrs with
+    | Symbols.StaticAttr { init; global } -> (
+        match init with
+        | Initial i -> Some (T.StaticVariable { name; global; init = i })
+        | Tentative -> Some (StaticVariable { name; global; init = 0 })
+        | NoInitializer -> None)
+    | _ -> None
+  in
+  List.filter_map to_var all_symbols
 
-let gen (Ast.Program fn_def_list) =
-  T.Program (emit_tacky_for_program fn_def_list)
+
+let gen (Ast.Program decls) =
+  let tacky_fn_defs = List.filter_map emit_fun_decl decls in
+  let tacky_var_defs = convert_symbols_to_tacky (Symbols.bindings ()) in
+  T.Program (tacky_var_defs @ tacky_fn_defs)

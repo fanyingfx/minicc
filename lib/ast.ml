@@ -54,16 +54,23 @@ and declaration =
   | FunDecl of function_declaration
 [@@deriving show]
 
-and variable_declaration = { name : string; init : exp option }
+and storage_class = Static | Extern [@@deriving show]
+
+and variable_declaration = {
+  name : string;
+  init : exp option;
+  storage_class : storage_class option;
+}
 
 and function_declaration = {
   name : string;
   params : string list;
   body : block option;
+  storage_class : storage_class option;
 }
 
 and block_item = S of statement | D of declaration [@@deriving show]
 and block = Block of block_item list
 and for_init = InitDecl of variable_declaration | InitExp of exp option
 
-type t = Program of function_declaration list [@@deriving show]
+type t = Program of declaration list [@@deriving show]
